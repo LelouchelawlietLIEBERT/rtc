@@ -1,0 +1,10 @@
+{
+  "name": "peerjs-server-heroku",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "peerjs --port $PORT --key peerjs"
+  },
+  "dependencies": {
+    "peer": "^0.4.4"
+  }
+}
