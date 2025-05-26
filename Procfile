@@ -1,1 +1,1 @@
-web: peerjs --port $PORT --key peerjs
+web: peerjs --port 3001 --key peerjs
