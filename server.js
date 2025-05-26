@@ -3,6 +3,7 @@ const app = express();
 const server = require("http").createServer(app);
 const io = require("socket.io")(server);
 const nunjucks = require("nunjucks");
+const { ExpressPeerServer } = require('peer');
 
 nunjucks.configure("views", {
   autoescape: true,
@@ -36,6 +37,15 @@ io.on("connection", (socket) => {
 });
 
 
-server.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+const peerServer = ExpressPeerServer(server, {
+  debug: true,
+  path: '/'
+});
+
+app.use('/peerjs', peerServer);
+
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+  console.log(`Server running on port http://localhost:${PORT}`);
 });
