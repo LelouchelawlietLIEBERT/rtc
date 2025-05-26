@@ -1,9 +1,9 @@
 {
-  "name": "rtc",
+  "name": "webrtc",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon server.js" 
+    "start": "nodemon server.js"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +13,7 @@
     "express": "^5.1.0",
     "nodemon": "^3.1.10",
     "nunjucks": "^3.2.4",
+    "peer": "^1.0.2",
     "socket.io": "^4.8.1"
   }
 }
