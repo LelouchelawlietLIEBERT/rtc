@@ -1,19 +1,37 @@
 {
-  "name": "webrtc",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "start": "nodemon server.js"
+  "name": "rtc",
+  "version": "2.0.0",
+  "private": true,
+  "description": "A lightweight, peer-to-peer video conferencing platform built with WebRTC, Socket.IO, Express and Nunjucks.",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20.12"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check lib/app.js && node --check lib/config.js && node --check lib/rate-limit.js && node --check lib/realtime.js && node --check lib/rooms.js && node --check lib/validation.js && node --check public/js/common.js && node --check public/js/home.js && node --check public/js/media.js && node --check public/js/room.js && node --check test/helpers.js && node --check test/server.test.js && node --check test/e2e/meeting.test.js",
+    "test": "node --test test/*.test.js",
+    "test:e2e": "node --test test/e2e/*.test.js"
+  },
+  "keywords": [
+    "webrtc",
+    "socket.io",
+    "video-conferencing"
+  ],
+  "author": "Ashwin Gowda",
+  "license": "MIT",
   "dependencies": {
     "express": "^5.1.0",
-    "nodemon": "^3.1.10",
+    "lucide": "^1.61.0",
     "nunjucks": "^3.2.4",
-    "peer": "^1.0.2",
     "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.49.0",
+    "socket.io-client": "^4.8.1"
+  },
+  "overrides": {
+    "chokidar": "4.0.3"
   }
 }

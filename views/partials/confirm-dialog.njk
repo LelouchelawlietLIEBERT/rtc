@@ -1,0 +1,17 @@
+<dialog id="confirm-dialog" class="dialog dialog--sm" aria-labelledby="confirm-title" aria-describedby="confirm-description">
+  <div class="dialog__header">
+    <div class="dialog__heading">
+      <span class="dialog__icon dialog__icon--danger" id="confirm-icon" aria-hidden="true">
+        <i data-lucide="triangle-alert"></i>
+      </span>
+      <div>
+        <h2 class="dialog__title" id="confirm-title">Are you sure?</h2>
+        <p class="dialog__description" id="confirm-description"></p>
+      </div>
+    </div>
+  </div>
+  <div class="dialog__footer">
+    <button type="button" class="btn btn-secondary" data-confirm-cancel>Cancel</button>
+    <button type="button" class="btn btn-danger" data-confirm-ok>Confirm</button>
+  </div>
+</dialog>

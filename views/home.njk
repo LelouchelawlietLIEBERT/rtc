@@ -1,26 +1,376 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Home</title>
-  <link rel="stylesheet" href="/style.css">
-</head>
-<body>
-<div class="container">
-    <form action="/room" class="form">
-        <div class="form_front">
-            <div class="form_details">ENTER ROOM ID</div>
-            <input type="text" class="input" placeholder="Enter ID" name="id" required>
-            <button type="submit" class="btn">JOIN ROOM</button>
+{% extends "layout.njk" %}
+
+{% set appName = appName or "RTC" %}
+
+{% block title %}{{ appName }} — Peer-to-peer video meetings{% endblock %}
+{% block description %}Start a private, peer-to-peer video room in seconds. Invite anyone with a link, share your screen, and chat in real time.{% endblock %}
+{% block bodyClass %}page-home{% endblock %}
+{% block styles %}<link rel="stylesheet" href="/css/home.css" />{% endblock %}
+
+{% block body %}
+<header class="site-header">
+  <div class="container site-header__inner">
+    {% include "partials/logo.njk" %}
+
+    <nav class="site-nav" aria-label="Primary">
+      <a class="nav-link" href="#meetings">Meetings</a>
+      <a class="nav-link" href="#how-it-works">How it works</a>
+      <a
+        class="nav-link nav-link--external"
+        href="https://github.com/LelouchelawlietLIEBERT/rtc"
+        target="_blank"
+        rel="noreferrer noopener"
+      >
+        GitHub
+        <i data-lucide="arrow-up-right"></i>
+      </a>
+    </nav>
+
+    <div class="site-header__actions">
+      <button
+        type="button"
+        class="btn btn-ghost display-name-trigger"
+        data-dialog-open="name-dialog"
+        aria-label="Edit your display name"
+      >
+        <span class="avatar avatar--sm" data-user-avatar aria-hidden="true">G</span>
+        <span class="display-name-label" data-user-name>Set your name</span>
+      </button>
+      {% include "partials/theme-toggle.njk" %}
+    </div>
+  </div>
+</header>
+
+<main id="main" class="container home-main">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero__copy">
+      <span class="pill">
+        <i data-lucide="sparkles"></i>
+        No downloads. No sign-up.
+      </span>
+      <h1 id="hero-title">
+        Meetings that stay
+        <span class="text-muted">out of your way.</span>
+      </h1>
+      <p class="hero__lede">
+        Start a peer-to-peer video room in seconds. Invite anyone with a link,
+        share your screen, and keep the conversation moving.
+      </p>
+      <div class="hero__actions">
+        <button type="button" class="btn btn-primary btn-lg" id="instant-meeting">
+          <i data-lucide="video"></i>
+          Start instant meeting
+        </button>
+        <a class="btn btn-outline btn-lg" href="#join">
+          <i data-lucide="link-2"></i>
+          Join a meeting
+        </a>
+      </div>
+      <ul class="hero__meta" aria-label="Product highlights">
+        <li><i data-lucide="users"></i> Up to {{ maxParticipants }} people</li>
+        <li><i data-lucide="shield-check"></i> Encrypted WebRTC media</li>
+        <li><i data-lucide="monitor-up"></i> Screen sharing</li>
+      </ul>
+    </div>
+
+    <div class="hero__panel" id="join">
+      <div class="card join-card">
+        <div class="card__header">
+          <div>
+            <h2 class="card__title">Join a meeting</h2>
+            <p class="card__description">Paste the invite link or enter the code.</p>
+          </div>
         </div>
-    </form>
-        <form action="/room" class="form">
-        <div class="form_front">
-            <div class="form_details">ENTER ROOM ID</div>
-            <input type="text" class="input" placeholder="Enter ID" name="id" required>
-            <button type="submit" class="btn">JOIN ROOM</button>
+        <form id="join-form" class="stack" novalidate>
+          <div class="field">
+            <label class="label" for="join-code">Meeting code or link</label>
+            <div class="input-group">
+              <i data-lucide="link-2" class="input-group__icon" aria-hidden="true"></i>
+              <input
+                class="input input--with-icon"
+                id="join-code"
+                name="code"
+                type="text"
+                inputmode="text"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="abc-defg-hij"
+                aria-describedby="join-hint join-error"
+                required
+              />
+            </div>
+            <p class="field-hint" id="join-hint">
+              Codes look like <code>abc-defg-hij</code>.
+            </p>
+            <p class="field-error" id="join-error" role="alert" hidden></p>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">
+            Join meeting
+            <i data-lucide="arrow-right"></i>
+          </button>
+        </form>
+        <div class="card__divider" role="separator"></div>
+        <button type="button" class="btn btn-secondary btn-block" data-open-create>
+          <i data-lucide="calendar-plus"></i>
+          Create a meeting for later
+        </button>
+        <p class="join-card__note">
+          Private meetings place new guests in a waiting room until the host
+          admits them.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section recent-section" id="meetings" aria-labelledby="recent-title">
+    <div class="section__header">
+      <div>
+        <h2 class="section__title" id="recent-title">Recent meetings</h2>
+        <p class="section__description">
+          Rooms you created or joined from this browser.
+        </p>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" id="clear-recent" hidden>
+        <i data-lucide="trash-2"></i>
+        Clear all
+      </button>
+    </div>
+    <div class="recent-list" id="recent-list"></div>
+    <div class="empty-state empty-state--compact" id="recent-empty">
+      <span class="empty-state__icon" aria-hidden="true">
+        <i data-lucide="history"></i>
+      </span>
+      <div>
+        <h3>No recent meetings</h3>
+        <p>Meetings you start or join will show up here for quick access.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section features" id="how-it-works" aria-labelledby="features-title">
+    <div class="section__header">
+      <div>
+        <span class="eyebrow">How it works</span>
+        <h2 class="section__title" id="features-title">Built for small, focused calls.</h2>
+      </div>
+    </div>
+    <div class="feature-grid">
+      <article class="feature-card">
+        <span class="feature-card__icon" aria-hidden="true"><i data-lucide="video"></i></span>
+        <h3>Direct by default</h3>
+        <p>
+          Media travels peer-to-peer through WebRTC. Socket.IO only carries
+          signaling, chat, and room events.
+        </p>
+      </article>
+      <article class="feature-card">
+        <span class="feature-card__icon" aria-hidden="true"><i data-lucide="shield-check"></i></span>
+        <h3>Rooms with boundaries</h3>
+        <p>
+          Private rooms use long random codes, host-approved entry, and
+          server-enforced moderation.
+        </p>
+      </article>
+      <article class="feature-card">
+        <span class="feature-card__icon" aria-hidden="true"><i data-lucide="gauge"></i></span>
+        <h3>Lightweight on purpose</h3>
+        <p>
+          No account required and no heavy client. Just the browser, your
+          camera, and a meeting link.
+        </p>
+      </article>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <p>© 2026 {{ appName }}. Built with WebRTC, Socket.IO, and Node.js.</p>
+    <nav class="site-footer__links" aria-label="Footer">
+      <a href="https://github.com/LelouchelawlietLIEBERT/rtc" target="_blank" rel="noreferrer noopener">Source</a>
+      <a href="/healthz" target="_blank" rel="noreferrer noopener">Status</a>
+      <a href="/room">Join by code</a>
+    </nav>
+  </div>
+</footer>
+
+<dialog
+  id="create-dialog"
+  class="dialog"
+  aria-labelledby="create-title"
+  aria-describedby="create-description"
+>
+  <form id="create-form" novalidate>
+    <div class="dialog__header">
+      <div class="dialog__heading">
+        <span class="dialog__icon" aria-hidden="true"><i data-lucide="calendar-plus"></i></span>
+        <div>
+          <h2 class="dialog__title" id="create-title">Create a meeting</h2>
+          <p class="dialog__description" id="create-description">
+            Name it, choose who can walk in, then share the link.
+          </p>
         </div>
-    </form>
-</div>
-</body>
-</html>
+      </div>
+      <button type="button" class="btn btn-ghost btn-icon" data-dialog-close aria-label="Close dialog">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    <div class="dialog__body stack">
+      <div class="field">
+        <label class="label" for="create-title-input">Meeting title <span class="label__optional">Optional</span></label>
+        <input
+          class="input"
+          id="create-title-input"
+          name="title"
+          type="text"
+          maxlength="80"
+          autocomplete="off"
+          placeholder="Design sync"
+        />
+      </div>
+
+      <fieldset class="field">
+        <legend class="label">Who can join?</legend>
+        <div class="choice-grid">
+          <label class="choice">
+            <input type="radio" name="privacy" value="public" checked />
+            <span class="choice__body">
+              <span class="choice__icon" aria-hidden="true"><i data-lucide="globe-2"></i></span>
+              <span class="choice__content">
+                <span class="choice__title">Public</span>
+                <span class="choice__description">Anyone with the link can enter.</span>
+              </span>
+              <span class="choice__check" aria-hidden="true"><i data-lucide="check"></i></span>
+            </span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="privacy" value="private" />
+            <span class="choice__body">
+              <span class="choice__icon" aria-hidden="true"><i data-lucide="lock-keyhole"></i></span>
+              <span class="choice__content">
+                <span class="choice__title">Private</span>
+                <span class="choice__description">Guests wait for your approval.</span>
+              </span>
+              <span class="choice__check" aria-hidden="true"><i data-lucide="check"></i></span>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+      <p class="form-error" id="create-error" role="alert" hidden></p>
+    </div>
+
+    <div class="dialog__footer dialog__footer--split">
+      <button type="button" class="btn btn-ghost" data-dialog-close>Cancel</button>
+      <div class="dialog__actions">
+        <button type="submit" class="btn btn-secondary" name="intent" value="later">
+          Create link
+        </button>
+        <button type="submit" class="btn btn-primary" name="intent" value="now">
+          Start now
+          <i data-lucide="arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog
+  id="created-dialog"
+  class="dialog"
+  aria-labelledby="created-title"
+  aria-describedby="created-description"
+>
+  <div class="dialog__header">
+    <div class="dialog__heading">
+      <span class="dialog__icon dialog__icon--success" aria-hidden="true"><i data-lucide="check"></i></span>
+      <div>
+        <h2 class="dialog__title" id="created-title">Meeting ready</h2>
+        <p class="dialog__description" id="created-description">
+          Share this link with the people you want to meet.
+        </p>
+      </div>
+    </div>
+    <button type="button" class="btn btn-ghost btn-icon" data-dialog-close aria-label="Close dialog">
+      <i data-lucide="x"></i>
+    </button>
+  </div>
+  <div class="dialog__body stack">
+    <div class="created-summary">
+      <div>
+        <span class="created-summary__label">Meeting</span>
+        <strong id="created-name">Untitled meeting</strong>
+      </div>
+      <span class="badge" id="created-privacy">Public</span>
+    </div>
+    <div class="field">
+      <label class="label" for="created-link">Invite link</label>
+      <div class="input-group">
+        <input class="input" id="created-link" type="text" readonly />
+        <button type="button" class="btn btn-secondary input-group__button" id="copy-created">
+          <i data-lucide="copy"></i>
+          Copy
+        </button>
+      </div>
+      <p class="field-hint">
+        The link contains the meeting code. Anyone with it can request entry.
+      </p>
+    </div>
+  </div>
+  <div class="dialog__footer dialog__footer--split">
+    <button type="button" class="btn btn-ghost" data-dialog-close>Done</button>
+    <a class="btn btn-primary" id="open-created-lobby" href="#">
+      Open lobby
+      <i data-lucide="arrow-right"></i>
+    </a>
+  </div>
+</dialog>
+
+<dialog
+  id="name-dialog"
+  class="dialog dialog--sm"
+  aria-labelledby="name-title"
+  aria-describedby="name-description"
+>
+  <form id="name-form" novalidate>
+    <div class="dialog__header">
+      <div class="dialog__heading">
+        <span class="dialog__icon" aria-hidden="true"><i data-lucide="user-round"></i></span>
+        <div>
+          <h2 class="dialog__title" id="name-title">Your display name</h2>
+          <p class="dialog__description" id="name-description">
+            This is how you appear in meetings and chat.
+          </p>
+        </div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-icon" data-dialog-close aria-label="Close dialog">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="dialog__body">
+      <div class="field">
+        <label class="label" for="name-input">Display name</label>
+        <input
+          class="input"
+          id="name-input"
+          name="displayName"
+          type="text"
+          maxlength="48"
+          autocomplete="nickname"
+          placeholder="Guest"
+          required
+        />
+        <p class="field-error" id="name-error" role="alert" hidden></p>
+      </div>
+    </div>
+    <div class="dialog__footer">
+      <button type="button" class="btn btn-ghost" data-dialog-close>Cancel</button>
+      <button type="submit" class="btn btn-primary">Save name</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/js/home.js" defer></script>
+{% endblock %}

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>{% block title %}{{ appName }}{% endblock %}</title>
+    <meta
+      name="description"
+      content="{% block description %}A lightweight, peer-to-peer video conferencing platform built with WebRTC.{% endblock %}"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/js/theme.js"></script>
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/components.css" />
+    {% block styles %}{% endblock %}
+    {% block head %}{% endblock %}
+  </head>
+  <body class="{% block bodyClass %}{% endblock %}">
+    <a class="skip-link" href="#main">Skip to content</a>
+    {% block body %}{% endblock %}
+
+    <div
+      id="toast-region"
+      class="toast-region"
+      role="region"
+      aria-label="Notifications"
+    ></div>
+
+    {% include "partials/confirm-dialog.njk" %}
+
+    <script src="/vendor/lucide.min.js" defer></script>
+    <script src="/js/common.js" defer></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

@@ -1,0 +1,30 @@
+{% extends "layout.njk" %}
+
+{% block title %}{{ title }} · {{ appName }}{% endblock %}
+{% block bodyClass %}page-error{% endblock %}
+
+{% block body %}
+<header class="site-header">
+  <div class="container site-header__inner">
+    {% include "partials/logo.njk" %}
+    <div class="site-header__actions">
+      {% include "partials/theme-toggle.njk" %}
+      <a class="btn btn-ghost btn-sm" href="/">Home</a>
+    </div>
+  </div>
+</header>
+<main id="main" class="container error-shell">
+  <div class="error-card card">
+    <span class="error-code">{{ statusCode }}</span>
+    <span class="error-icon" aria-hidden="true">
+      <i data-lucide="{{ 'door-closed' if statusCode == 410 else 'search-x' }}"></i>
+    </span>
+    <h1>{{ title }}</h1>
+    <p>{{ message }}</p>
+    <div class="error-card__actions">
+      <a class="btn btn-primary" href="{{ actionHref | default('/') }}">{{ actionLabel | default('Back to home') }}</a>
+      <a class="btn btn-ghost" href="/#join">Join with a code</a>
+    </div>
+  </div>
+</main>
+{% endblock %}

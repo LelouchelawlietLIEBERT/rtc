@@ -1,62 +1,762 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Room {{ rid }}</title>
-    <style>
-      body {
-        background-color: #212121;
-        color: whitesmoke;
-      }
-      #video-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(30%, 1fr));
-        gap: 1.5rem;
-        justify-content: center;
-        align-items: center;
-        width: 84rem;
-        backface-visibility: hidden;
-        padding: 65px 45px;
-        border-radius: 15px;
-        box-shadow: inset 2px 2px 10px rgba(0, 0, 0, 1),
-          inset -1px -1px 5px rgba(255, 255, 255, 0.6);
-        max-width: 100%;
-        overflow: hidden;
-      }
-      .video-container {
-        width: 100%;
-        height: 100%;
-      }
-      video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border: 1px solid grey;
-        border-radius: 20px;
-        box-shadow: 2px 3px 5px whitesmoke;
-      }
+{% extends "layout.njk" %}
 
-      #video-grid:has(> .video-container:only-child) {
-        grid-template-columns: 1fr;
-      }
+{% block title %}{{ room.title }} · {{ appName }}{% endblock %}
+{% block description %}Join {{ room.title }} on {{ appName }}.{% endblock %}
+{% block bodyClass %}page-room{% endblock %}
+{% block styles %}<link rel="stylesheet" href="/css/room.css" />{% endblock %}
 
-      #video-grid:has(> .video-container:nth-child(2):last-child) {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    </style>
-    <script>
-      const ROOM_ID = "{{ rid }}";
-    </script>
-    <script
-      src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"
-      defer
-    ></script>
-    <script src="/socket.io/socket.io.js" defer></script>
-    <script src="/script.js" defer></script>
-  </head>
-  <body>
-    <h1>Room ID: {{ rid }}</h1>
-    <div id="video-grid">
+{% block body %}
+<main
+  id="room-app"
+  class="room-app"
+  data-room-code="{{ room.code }}"
+  data-room-title="{{ room.title }}"
+  data-room-privacy="{{ room.privacy }}"
+  data-room-created="{{ room.createdAt }}"
+  data-app-url="{{ appUrl }}"
+  data-capacity="{{ room.capacity }}"
+>
+  <section id="lobby-view" class="lobby-view" aria-labelledby="lobby-title">
+    <header class="lobby-header">
+      <div class="lobby-header__inner">
+        {% include "partials/logo.njk" %}
+        <div class="lobby-header__actions">
+          <span class="badge badge--outline" id="lobby-privacy-badge">
+            <i data-lucide="{{ 'lock-keyhole' if room.privacy == 'private' else 'globe-2' }}"></i>
+            <span data-privacy-label>{{ 'Private' if room.privacy == 'private' else 'Public' }}</span>
+          </span>
+          {% include "partials/theme-toggle.njk" %}
+          <a class="btn btn-ghost btn-sm" href="/">
+            <i data-lucide="arrow-left"></i>
+            Home
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <div class="lobby-layout container">
+      <div class="lobby-preview-column">
+        <div class="preview-card">
+          <div class="preview-frame" id="preview-frame">
+            <div class="preview-video-wrap">
+              <video id="preview-video" autoplay muted playsinline></video>
+              <div class="preview-placeholder" id="preview-placeholder" hidden>
+                <span class="avatar avatar--xl" id="preview-avatar">G</span>
+                <p>Camera is off</p>
+              </div>
+            </div>
+            <div class="preview-top">
+              <span class="status-chip" id="preview-status">
+                <i data-lucide="camera-off"></i>
+                <span>Camera off</span>
+              </span>
+              <span class="badge badge--soft">
+                <i data-lucide="eye"></i>
+                Preview
+              </span>
+            </div>
+            <div class="preview-controls" role="group" aria-label="Preview controls">
+              <button
+                type="button"
+                class="lobby-control"
+                id="lobby-mic"
+                aria-label="Turn microphone on"
+                aria-pressed="false"
+                data-tooltip="Microphone"
+              >
+                <span class="icon-slot" data-icon-slot><i data-lucide="mic-off"></i></span>
+              </button>
+              <button
+                type="button"
+                class="lobby-control"
+                id="lobby-camera"
+                aria-label="Turn camera on"
+                aria-pressed="false"
+                data-tooltip="Camera"
+              >
+                <span class="icon-slot" data-icon-slot><i data-lucide="video-off"></i></span>
+              </button>
+              <button
+                type="button"
+                class="lobby-control"
+                id="lobby-settings"
+                aria-label="Go to device settings"
+                data-tooltip="Devices"
+              >
+                <span class="icon-slot" data-icon-slot><i data-lucide="settings-2"></i></span>
+              </button>
+            </div>
+            <div class="preview-statusbar">
+              <span class="preview-statusbar__dot" id="preview-dot"></span>
+              <span id="preview-status-text">Requesting camera and microphone…</span>
+            </div>
+          </div>
+
+          <div class="lobby-room-meta">
+            <p class="eyebrow">You're joining</p>
+            <h1 class="lobby-title" id="lobby-title">{{ room.title }}</h1>
+            <div class="lobby-room-meta__row">
+              <button type="button" class="code-chip" id="copy-code" data-tooltip="Copy meeting code">
+                <i data-lucide="hash"></i>
+                <span>{{ room.code }}</span>
+                <i data-lucide="copy" class="code-chip__copy"></i>
+              </button>
+              <span class="badge" data-privacy-badge>
+                <i data-lucide="{{ 'lock-keyhole' if room.privacy == 'private' else 'globe-2' }}"></i>
+                <span data-privacy-label>{{ 'Private' if room.privacy == 'private' else 'Public' }}</span>
+              </span>
+              <span class="badge badge--outline" id="host-badge" hidden>
+                <i data-lucide="crown"></i>
+                You're the host
+              </span>
+            </div>
+            <p class="lobby-room-meta__note" id="lobby-room-note">
+              {% if room.privacy == 'private' %}
+                The host must admit you before you can enter.
+              {% else %}
+                Anyone with this link can join this meeting.
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <aside class="lobby-sidebar card" id="device-settings" aria-labelledby="join-heading">
+        <div class="card__header">
+          <div>
+            <h2 class="card__title" id="join-heading">Ready to join?</h2>
+            <p class="card__description">Set up your name and devices first.</p>
+          </div>
+          <span class="badge badge--outline" id="capacity-badge">
+            <i data-lucide="users"></i>
+            <span>{{ room.participantCount }}/{{ room.capacity }}</span>
+          </span>
+        </div>
+
+        <div class="stack">
+          <div class="field">
+            <label class="label" for="lobby-name">Display name</label>
+            <input
+              class="input"
+              id="lobby-name"
+              type="text"
+              maxlength="48"
+              autocomplete="nickname"
+              placeholder="Your name"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <div class="field__label-row">
+              <label class="label" for="lobby-mic-select">Microphone</label>
+              <span class="field__status" id="mic-device-status"></span>
+            </div>
+            <div class="select-wrap">
+              <i data-lucide="mic" aria-hidden="true"></i>
+              <select class="select" id="lobby-mic-select" data-device-select="audioinput">
+                <option value="">System default</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field__label-row">
+              <label class="label" for="lobby-camera-select">Camera</label>
+              <span class="field__status" id="camera-device-status"></span>
+            </div>
+            <div class="select-wrap">
+              <i data-lucide="video" aria-hidden="true"></i>
+              <select class="select" id="lobby-camera-select" data-device-select="videoinput">
+                <option value="">System default</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field" id="speaker-field" hidden>
+            <label class="label" for="lobby-speaker-select">Speaker</label>
+            <div class="select-wrap">
+              <i data-lucide="volume-2" aria-hidden="true"></i>
+              <select class="select" id="lobby-speaker-select" data-device-select="audiooutput">
+                <option value="">System default</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field__inline">
+            <button type="button" class="btn btn-ghost btn-sm" id="refresh-devices">
+              <i data-lucide="refresh-cw"></i>
+              Refresh devices
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm" id="copy-invite-lobby">
+              <i data-lucide="link"></i>
+              Copy invite link
+            </button>
+          </div>
+
+          <div class="status-note" id="media-status" role="status">
+            <span class="status-note__icon" aria-hidden="true"><i data-lucide="loader-circle" class="spin"></i></span>
+            <div>
+              <strong>Checking your devices</strong>
+              <p>Browser permission may be requested.</p>
+            </div>
+          </div>
+
+          <p class="form-error" id="lobby-error" role="alert" hidden></p>
+
+          <button type="button" class="btn btn-primary btn-lg btn-block" id="join-meeting">
+            <i data-lucide="log-in"></i>
+            Join meeting
+          </button>
+          <p class="field-hint field-hint--center" id="join-hint-text">
+            You can join with your microphone or camera off.
+          </p>
+        </div>
+      </aside>
     </div>
-  </body>
-</html>
+  </section>
+
+  <section id="waiting-view" class="state-view" hidden aria-labelledby="waiting-title">
+    <div class="state-card card">
+      <div class="waiting-orbit" aria-hidden="true">
+        <span class="waiting-orbit__ring"></span>
+        <span class="waiting-orbit__avatar" id="waiting-avatar">G</span>
+      </div>
+      <span class="eyebrow">Private meeting</span>
+      <h1 class="state-card__title" id="waiting-title">Waiting for the host</h1>
+      <p class="state-card__description" id="waiting-message">
+        Your request to join has been sent. Keep this tab open.
+      </p>
+      <div class="waiting-room">
+        <div>
+          <span class="waiting-room__label">Meeting</span>
+          <strong>{{ room.title }}</strong>
+        </div>
+        <button type="button" class="code-chip code-chip--sm" id="copy-code-waiting">
+          <i data-lucide="hash"></i>
+          <span>{{ room.code }}</span>
+          <i data-lucide="copy" class="code-chip__copy"></i>
+        </button>
+      </div>
+      <div class="state-card__actions">
+        <button type="button" class="btn btn-secondary" id="cancel-waiting">
+          Cancel request
+        </button>
+        <a class="btn btn-ghost" href="/">Back home</a>
+      </div>
+      <p class="state-card__footnote">
+        Your camera and microphone stay off while you wait.
+      </p>
+    </div>
+  </section>
+
+  <section id="exit-view" class="state-view" hidden aria-labelledby="exit-title">
+    <div class="state-card card">
+      <span class="state-card__icon state-card__icon--danger" id="exit-icon" aria-hidden="true">
+        <i data-lucide="door-closed"></i>
+      </span>
+      <h1 class="state-card__title" id="exit-title">Meeting unavailable</h1>
+      <p class="state-card__description" id="exit-message">
+        This meeting is no longer available.
+      </p>
+      <div class="state-card__actions">
+        <button type="button" class="btn btn-primary" id="exit-primary">Back to lobby</button>
+        <a class="btn btn-ghost" href="/">Back home</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="meeting-view" class="meeting-view" hidden aria-label="Meeting room">
+    <header class="meeting-header">
+      <div class="meeting-header__left">
+        <a class="brand brand--compact" href="/" aria-label="{{ appName }} home">
+          <span class="brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2.25" y="4.25" width="13.5" height="15.5" rx="4.25" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M15.75 10.2L20.2 7.7C20.86 7.33 21.7 7.81 21.7 8.57V15.43C21.7 16.19 20.86 16.67 20.2 16.3L15.75 13.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="8.6" cy="12" r="2.1" fill="currentColor"/>
+            </svg>
+          </span>
+        </a>
+        <div class="meeting-heading">
+          <h1 class="meeting-heading__title" data-meeting-title>{{ room.title }}</h1>
+          <div class="meeting-heading__meta">
+            <span class="badge badge--soft" data-privacy-badge>
+              <i data-lucide="{{ 'lock-keyhole' if room.privacy == 'private' else 'globe-2' }}"></i>
+              <span data-privacy-label>{{ 'Private' if room.privacy == 'private' else 'Public' }}</span>
+            </span>
+            <button type="button" class="meeting-code" id="copy-code-meeting" data-tooltip="Copy meeting code">
+              <i data-lucide="hash"></i>
+              {{ room.code }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="meeting-header__status">
+        <span class="meeting-timer" id="meeting-timer">
+          <i data-lucide="clock-3"></i>
+          <span>00:00</span>
+        </span>
+        <span class="connection-pill" id="connection-pill" data-state="connected">
+          <span class="connection-pill__dot"></span>
+          <span id="connection-label">Connected</span>
+        </span>
+        <span class="badge badge--outline participant-count" id="participant-count">
+          <i data-lucide="users"></i>
+          <span>1</span>
+        </span>
+      </div>
+
+      <div class="meeting-header__actions">
+        <button
+          type="button"
+          class="btn btn-ghost btn-icon"
+          id="copy-invite-meeting"
+          aria-label="Copy invite link"
+          data-tooltip="Copy invite link"
+        >
+          <i data-lucide="link"></i>
+        </button>
+        <button
+          type="button"
+          class="btn btn-ghost btn-icon"
+          data-dialog-open="details-dialog"
+          aria-label="Meeting details"
+          data-tooltip="Meeting details"
+        >
+          <i data-lucide="info"></i>
+        </button>
+        <button
+          type="button"
+          class="btn btn-ghost btn-icon"
+          data-dialog-open="settings-dialog"
+          aria-label="Settings"
+          data-tooltip="Settings"
+        >
+          <i data-lucide="settings-2"></i>
+        </button>
+      </div>
+    </header>
+
+    <div class="meeting-body" id="meeting-body">
+      <div class="stage" id="stage">
+        <div class="video-grid" id="video-grid" data-count="1"></div>
+
+        <div class="alone-state" id="alone-state" hidden>
+          <div class="alone-state__content">
+            <span class="alone-state__icon" aria-hidden="true"><i data-lucide="users-round"></i></span>
+            <h2>You're the only one here</h2>
+            <p>Share the invite link and people can join from any browser.</p>
+            <button type="button" class="btn btn-primary" id="copy-invite-alone">
+              <i data-lucide="copy"></i>
+              Copy invite link
+            </button>
+          </div>
+        </div>
+
+        <div class="stage-banner" id="audio-unlock" hidden>
+          <div>
+            <i data-lucide="volume-x"></i>
+            <span>Your browser blocked remote audio.</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="enable-audio">
+            Enable audio
+          </button>
+        </div>
+
+        <div class="stage-banner stage-banner--presenting" id="share-banner" hidden>
+          <div>
+            <span class="recording-dot" aria-hidden="true"></span>
+            <span>You're presenting your screen</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="stop-sharing-banner">
+            Stop presenting
+          </button>
+        </div>
+
+        <button type="button" class="stage-banner stage-banner--waiting" id="waiting-banner" hidden>
+          <span class="waiting-banner__icon"><i data-lucide="user-round-plus"></i></span>
+          <span id="waiting-banner-text">Someone is waiting to join</span>
+          <span class="btn btn-secondary btn-sm">Review</span>
+        </button>
+      </div>
+
+      <aside class="side-panel" id="side-panel" aria-label="Meeting panels" hidden>
+        <div class="side-panel__header">
+          <div class="tabs" role="tablist" aria-label="Meeting panels">
+            <button
+              type="button"
+              class="tab"
+              id="tab-chat"
+              role="tab"
+              aria-selected="true"
+              aria-controls="panel-chat"
+              data-panel="chat"
+            >
+              <i data-lucide="message-square"></i>
+              Chat
+              <span class="tab__badge" id="chat-unread" hidden>0</span>
+            </button>
+            <button
+              type="button"
+              class="tab"
+              id="tab-people"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panel-people"
+              data-panel="people"
+            >
+              <i data-lucide="users"></i>
+              People
+              <span class="tab__badge" id="people-badge" hidden>0</span>
+            </button>
+          </div>
+          <button type="button" class="btn btn-ghost btn-icon" id="close-panel" aria-label="Close panel">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <div class="side-panel__body">
+          <section id="panel-chat" class="panel panel--chat" role="tabpanel" aria-labelledby="tab-chat">
+            <div class="chat-messages" id="chat-messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+            <div class="chat-empty" id="chat-empty">
+              <span class="chat-empty__icon" aria-hidden="true"><i data-lucide="messages-square"></i></span>
+              <h3>No messages yet</h3>
+              <p>Messages are visible to people in this meeting and are not saved after it ends.</p>
+            </div>
+            <p class="chat-status" id="chat-status" hidden>Reconnecting to chat…</p>
+            <form class="chat-composer" id="chat-form" novalidate>
+              <label class="sr-only" for="chat-input">Message</label>
+              <textarea
+                class="chat-input"
+                id="chat-input"
+                rows="1"
+                maxlength="2000"
+                placeholder="Send a message"
+                autocomplete="off"
+              ></textarea>
+              <div class="chat-composer__footer">
+                <span class="chat-count" id="chat-count">0/2000</span>
+                <span class="chat-hint">Enter to send · Shift + Enter for a new line</span>
+                <button type="submit" class="chat-send" id="chat-send" aria-label="Send message" disabled>
+                  <i data-lucide="send-horizontal"></i>
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section id="panel-people" class="panel" role="tabpanel" aria-labelledby="tab-people" hidden>
+            <div class="waiting-section" id="waiting-section" hidden>
+              <div class="panel-section__header">
+                <h3>Waiting to join</h3>
+                <span class="badge badge--warning" id="waiting-count">0</span>
+              </div>
+              <div class="waiting-list" id="waiting-list"></div>
+            </div>
+            <div class="people-section">
+              <div class="panel-section__header">
+                <h3>In the meeting</h3>
+                <span class="badge badge--outline" id="people-total">1</span>
+              </div>
+              <div class="people-list" id="people-list"></div>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="control-bar-wrap">
+      <div class="control-bar" role="toolbar" aria-label="Meeting controls">
+        <div class="control-group">
+          <button
+            type="button"
+            class="control-btn"
+            id="toggle-mic"
+            aria-label="Mute microphone"
+            aria-pressed="true"
+            data-tooltip="Mute (M)"
+          >
+            <span class="icon-slot" data-icon-slot><i data-lucide="mic"></i></span>
+            <span class="control-btn__label">Mute</span>
+          </button>
+          <button
+            type="button"
+            class="control-btn"
+            id="toggle-camera"
+            aria-label="Turn camera off"
+            aria-pressed="true"
+            data-tooltip="Camera (V)"
+          >
+            <span class="icon-slot" data-icon-slot><i data-lucide="video"></i></span>
+            <span class="control-btn__label">Camera</span>
+          </button>
+          <button
+            type="button"
+            class="control-btn"
+            id="toggle-share"
+            aria-label="Share your screen"
+            aria-pressed="false"
+            data-tooltip="Present (P)"
+          >
+            <span class="icon-slot" data-icon-slot><i data-lucide="screen-share"></i></span>
+            <span class="control-btn__label">Present</span>
+          </button>
+          <button
+            type="button"
+            class="control-btn"
+            id="toggle-hand"
+            aria-label="Raise your hand"
+            aria-pressed="false"
+            data-tooltip="Raise hand (H)"
+          >
+            <span class="icon-slot" data-icon-slot><i data-lucide="hand"></i></span>
+            <span class="control-btn__label">Raise hand</span>
+          </button>
+        </div>
+
+        <div class="control-group control-group--center">
+          <button
+            type="button"
+            class="control-btn"
+            id="toggle-chat"
+            aria-label="Open chat"
+            aria-pressed="false"
+            data-tooltip="Chat (C)"
+          >
+            <span class="icon-slot" data-icon-slot><i data-lucide="message-square"></i></span>
+            <span class="control-btn__label">Chat</span>
+            <span class="control-badge" id="chat-control-badge" hidden>0</span>
+          </button>
+          <button
+            type="button"
+            class="control-btn"
+            id="toggle-people"
+            aria-label="Open participant list"
+            aria-pressed="false"
+            data-tooltip="People (U)"
+          >
+            <span class="icon-slot" data-icon-slot><i data-lucide="users"></i></span>
+            <span class="control-btn__label">People</span>
+            <span class="control-badge" id="people-control-badge" hidden>0</span>
+          </button>
+          <div class="dropdown" data-dropdown>
+            <button
+              type="button"
+              class="control-btn"
+              id="more-button"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-label="More meeting actions"
+              data-tooltip="More"
+            >
+              <span class="icon-slot" data-icon-slot><i data-lucide="more-horizontal"></i></span>
+              <span class="control-btn__label">More</span>
+            </button>
+            <div class="dropdown__menu" id="more-menu" role="menu" hidden>
+              <button type="button" class="dropdown__item" role="menuitem" data-dialog-open="details-dialog">
+                <i data-lucide="info"></i>
+                Meeting details
+              </button>
+              <button type="button" class="dropdown__item" role="menuitem" data-dialog-open="settings-dialog">
+                <i data-lucide="settings-2"></i>
+                Settings
+              </button>
+              <button type="button" class="dropdown__item" role="menuitem" id="copy-link-menu">
+                <i data-lucide="link"></i>
+                Copy invite link
+              </button>
+              <div class="dropdown__separator" role="separator"></div>
+              <button type="button" class="dropdown__item dropdown__item--danger" role="menuitem" id="end-meeting" hidden>
+                <i data-lucide="phone-off"></i>
+                End meeting for all
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-group control-group--end">
+          <button
+            type="button"
+            class="control-btn control-btn--danger control-btn--leave"
+            id="leave-meeting"
+            aria-label="Leave meeting"
+          >
+            <span class="icon-slot" data-icon-slot><i data-lucide="phone-off"></i></span>
+            <span class="control-btn__label">Leave</span>
+          </button>
+        </div>
+      </div>
+    </footer>
+  </section>
+</main>
+
+<dialog id="details-dialog" class="dialog" aria-labelledby="details-title">
+  <div class="dialog__header">
+    <div class="dialog__heading">
+      <span class="dialog__icon" aria-hidden="true"><i data-lucide="info"></i></span>
+      <div>
+        <h2 class="dialog__title" id="details-title">Meeting details</h2>
+        <p class="dialog__description">Invite people or check the room information.</p>
+      </div>
+    </div>
+    <button type="button" class="btn btn-ghost btn-icon" data-dialog-close aria-label="Close dialog">
+      <i data-lucide="x"></i>
+    </button>
+  </div>
+  <div class="dialog__body stack">
+    <div class="detail-row">
+      <span class="detail-row__label">Meeting</span>
+      <strong data-meeting-title>{{ room.title }}</strong>
+    </div>
+    <div class="detail-row">
+      <span class="detail-row__label">Privacy</span>
+      <span class="badge" data-privacy-badge>
+        <i data-lucide="{{ 'lock-keyhole' if room.privacy == 'private' else 'globe-2' }}"></i>
+        <span data-privacy-label>{{ 'Private' if room.privacy == 'private' else 'Public' }}</span>
+      </span>
+    </div>
+    <div class="detail-row">
+      <span class="detail-row__label">Meeting code</span>
+      <code class="code-inline">{{ room.code }}</code>
+    </div>
+    <div class="detail-row">
+      <span class="detail-row__label">Participants</span>
+      <span id="details-participants">1</span>
+    </div>
+    <div class="field">
+      <label class="label" for="details-link">Invite link</label>
+      <div class="input-group">
+        <input class="input" id="details-link" type="text" readonly value="{{ appUrl }}/room/{{ room.code }}" />
+        <button type="button" class="btn btn-secondary input-group__button" id="copy-details-link">
+          <i data-lucide="copy"></i>
+          Copy
+        </button>
+      </div>
+    </div>
+    <div class="notice notice--info">
+      <i data-lucide="lock-keyhole" aria-hidden="true"></i>
+      <p>
+        {% if room.privacy == 'private' %}
+          New guests wait for the host to admit them. The host credential is stored only in this browser.
+        {% else %}
+          Anyone with this link can enter while the meeting is active. The meeting is not listed publicly.
+        {% endif %}
+      </p>
+    </div>
+  </div>
+  <div class="dialog__footer">
+    <button type="button" class="btn btn-secondary" data-dialog-close>Close</button>
+  </div>
+</dialog>
+
+<dialog id="settings-dialog" class="dialog" aria-labelledby="settings-title">
+  <div class="dialog__header">
+    <div class="dialog__heading">
+      <span class="dialog__icon" aria-hidden="true"><i data-lucide="settings-2"></i></span>
+      <div>
+        <h2 class="dialog__title" id="settings-title">Settings</h2>
+        <p class="dialog__description">Changes to devices apply immediately.</p>
+      </div>
+    </div>
+    <button type="button" class="btn btn-ghost btn-icon" data-dialog-close aria-label="Close dialog">
+      <i data-lucide="x"></i>
+    </button>
+  </div>
+  <div class="dialog__body stack">
+    <div class="settings-section">
+      <h3 class="settings-section__title">Appearance</h3>
+      <div class="settings-row">
+        <div>
+          <strong>Theme</strong>
+          <p>Switch between light and dark.</p>
+        </div>
+        {% include "partials/theme-toggle.njk" %}
+      </div>
+      <div class="settings-row">
+        <div>
+          <strong>Mirror my camera</strong>
+          <p>Only affects your own preview.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="mirror-toggle" checked />
+          <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+          <span class="sr-only">Mirror my camera</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3 class="settings-section__title">Devices</h3>
+      <div class="field">
+        <label class="label" for="meeting-mic-select">Microphone</label>
+        <div class="select-wrap">
+          <i data-lucide="mic" aria-hidden="true"></i>
+          <select class="select" id="meeting-mic-select" data-device-select="audioinput">
+            <option value="">System default</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label" for="meeting-camera-select">Camera</label>
+        <div class="select-wrap">
+          <i data-lucide="video" aria-hidden="true"></i>
+          <select class="select" id="meeting-camera-select" data-device-select="videoinput">
+            <option value="">System default</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" id="meeting-speaker-field" hidden>
+        <label class="label" for="meeting-speaker-select">Speaker</label>
+        <div class="select-wrap">
+          <i data-lucide="volume-2" aria-hidden="true"></i>
+          <select class="select" id="meeting-speaker-select" data-device-select="audiooutput">
+            <option value="">System default</option>
+          </select>
+        </div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="refresh-devices-meeting">
+        <i data-lucide="refresh-cw"></i>
+        Refresh device list
+      </button>
+    </div>
+
+    <div class="settings-section">
+      <h3 class="settings-section__title">Connection</h3>
+      <div class="settings-row">
+        <div>
+          <strong>Media relay</strong>
+          <p id="turn-status">Checking network configuration…</p>
+        </div>
+        <span class="badge badge--outline" id="turn-badge">—</span>
+      </div>
+      <p class="settings-footnote">
+        WebRTC uses STUN for NAT discovery. A TURN relay is required on some
+        restrictive networks; without one, peers may be unable to connect.
+      </p>
+    </div>
+
+    <div class="settings-section">
+      <h3 class="settings-section__title">Keyboard shortcuts</h3>
+      <dl class="shortcut-list">
+        <div><dt>M</dt><dd>Mute / unmute</dd></div>
+        <div><dt>V</dt><dd>Camera on / off</dd></div>
+        <div><dt>P</dt><dd>Start / stop presenting</dd></div>
+        <div><dt>C</dt><dd>Open chat</dd></div>
+        <div><dt>U</dt><dd>Open people</dd></div>
+        <div><dt>H</dt><dd>Raise / lower hand</dd></div>
+        <div><dt>Esc</dt><dd>Close panel or dialog</dd></div>
+      </dl>
+    </div>
+  </div>
+  <div class="dialog__footer">
+    <button type="button" class="btn btn-primary" data-dialog-close>Done</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/socket.io/socket.io.js" defer></script>
+<script src="/js/media.js" defer></script>
+<script src="/js/room.js" defer></script>
+{% endblock %}
